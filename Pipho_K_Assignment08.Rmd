@@ -1,0 +1,150 @@
+---
+title: "Assignment 08"
+author: "Krista Pipho, kp275"
+date: "April 7, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Clustering
+
+Load in libraries
+
+```{r message=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(RColorBrewer)
+library(dendextend)
+library(cluster)
+library(datasets)
+
+```
+
+
+###Problem 1:
+
+Using the built-in iris data set, create a distance matrix (using dist()) representing the Euclidean distance between each of the specimens (rows in the data frame). Make sure your distance matrix keeps the appropriate Species labels [2 pts]
+
+```{r}
+
+# Split the dataset into measures and species labels
+measures.only <- iris %>% dplyr::select(-Species)
+species.only <- as.vector(iris$Species)
+
+# Turn measures into a matrix and label matrix rows with species
+measures.only.m <- as.matrix(measures.only)
+rownames(measures.only.m) <- species.only
+
+# Calculate distance matrix
+iris.dist <- dist(measures.only.m, method = "euclidean", diag = TRUE, upper = TRUE)
+
+```
+
+###Problem 2:
+
+Carry out hierarchical clustering of the iris specimens using UPGMA aglommeration based on the distance matrix from Problem 1. Draw a dendrogram representing this clustering using the dendextend package, coloring the labels (see dendextend::labels_colors()) according to Species assignment. That is, all the setosa specimens should have labels with the same color, all the viriginica specimens should have labels in a different color, etc. [6 pts] 
+
+```{r, fig.width=25, fig.height=6}
+
+# Calculate UPGMA clusters and convert to dendrogram
+iris.tree <- hclust(iris.dist, method = "average")
+dend <- as.dendrogram(iris.tree)
+
+#For personal refference later
+#colored.labs.dend <- ifelse(grepl("setosa", labels(dend)), "red", ifelse(grepl("versicolor", labels(dend)), "blue", "green"))
+#dend2 <- assign_values_to_leaves_edgePar(dend=dend, value = colored.labs.dend, edgePar = "col")
+
+# Color lables based on species
+dendextend::labels_colors(dend) <- ifelse(grepl("setosa", labels(dend)), "red", ifelse(grepl("versicolor", labels(dend)), "blue", "green"))
+dend <- set(dend, "branches_lwd", 3)
+
+plot(dend)
+
+```
+
+
+
+
+###Problem 3:
+
+Cut your UPGMA dendrogram to yield 3 clusters, and plot the dendrogram color the branches according to cluster assignment. [2 pts]
+
+```{r, fig.width=25, fig.height=6}
+
+# Color dendrogram based on clusters
+plot(color_branches(dend, k=3))
+
+
+```
+
+
+###Problem 4:
+
+Carry out k-medoids clustering of the iris specimen using the distance matrix from Problem 1, specifying three clusters [2 pts]
+
+```{r, fig.width=25, fig.height=6}
+
+iris.kmedoids <- pam(iris.dist, 3) # create k-medoids clustering with 8 clusters
+
+kclusters <- iris.kmedoids$cluster
+table(kclusters)
+
+```
+
+
+###Problem 5:
+
+Generate a plot of the iris specimens in the space of the first two principal components (based on the covariance matrix). Color the specimens by their cluster membership according to the k-medoids clustering you carried out in the previous problem, and specify their shape by the Species label. [4 pts]
+
+```{r}
+
+# Calculate covriance matrix
+cov(measures.only)
+
+# Run PCA analysis
+measures.pca <- prcomp(measures.only, center=TRUE, retx=TRUE)
+
+# Extract PCA scores from prcomp output
+pca.scores.df <- as.data.frame(measures.pca$x)
+
+# Define a coordinate system for the plot
+coord.system <- coord_fixed(ratio=1, xlim=c(-4,4),ylim=c(-4,4))
+
+# Isolate the species column and add it to the scores data
+species.only <-
+  iris %>%
+  dplyr::select(Species)
+
+# reorder genes so they match the dendrogram
+Cluster <- as.factor(kclusters[order.dendrogram(dend)])
+
+pca.scores.df <- cbind(pca.scores.df,species.only, Cluster)
+
+# Plot
+pc1v2 <-
+  pca.scores.df %>%
+  ggplot(aes(x = PC1, y= PC2, color = Cluster, shape = Species)) +
+  geom_point(size = 2, alpha = .8) + 
+  coord.system + theme_classic()
+
+
+pc1v2
+
+```
+
+
+###Problem 6:
+
+Since we know the true Species groupings, it's straightforward to visually inspect the figures you made above to identify mis-clustered samples. By visual inspection, how many of the iris specimens are mis-clustered under the UPGMA clustering? By visual inspection, how many of the specimens are mis-clustered under the k-medoids clustering? [2 pts]
+
+
+It looks like about 15 samples are mis-clustered under the UPGMA clustering. It is harder to visualy inspect the PCA plot than the dendrogram, but it looks like a similar number are mis-clustered using the medoid method (green triangles).
+
+
+
+
+
+

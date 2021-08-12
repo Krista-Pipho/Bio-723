@@ -1,0 +1,207 @@
+---
+title: "Pipho_K_Assignment05"
+author: "Krista Pipho, kp275"
+date: "March 15, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##Bivariate Regression 
+
+Load in the lion nose color dataset
+
+```{r, message=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(ggExtra)
+
+url <- "https://github.com/bio304-class/bio304-course-notes/raw/master/datasets/ABD-lion-noses.csv"
+nose_color <- read_csv(url)
+glimpse(nose_color)
+
+```
+
+###Problem 1 a:
+
+Generate a bivariate plot (with marginal histograms) showing the relationship between nose pigmentation (the predictor variable) and age (the dependent variable) 
+
+```{r}
+
+bi_var_marginal_histograms <- ggplot(nose_color, aes(x = proportionBlack, y= ageInYears)) + geom_point() + labs(x = "Proportion Black", y = "Age", 
+       title = "Bivariate Plot of Nose Pigmentation vs. Age")
+ggMarginal(bi_var_marginal_histograms, type = "histogram", bins = 11)
+
+bi_var_marginal_histograms
+
+```
+
+
+###Problem 1 b:
+
+Using vector operations calculate the regression coefficients for the regression of age on nose pigementation.
+
+```{r}
+
+# Calculating mean centered vectors
+centered_proportionBlack <- nose_color$proportionBlack - mean(nose_color$proportionBlack)
+centered_age <- nose_color$ageInYears - mean(nose_color$ageInYears)
+
+# Estimate coefficients
+b.est <- (centered_proportionBlack %*% centered_age) / (centered_proportionBlack %*% centered_proportionBlack)
+a.est <- mean(nose_color$ageInYears) - b.est * mean(nose_color$proportionBlack)
+
+# 'drop' used to convert to scalar values
+regression <-  list(intercept = drop(a.est), slope = drop(b.est))
+regression
+
+```
+
+###Problem 1 c:
+
+Modify your bivariate plot for problem 1a to illustrate the estimated regression.
+
+
+```{r}
+
+bi_var_marginal_histograms_abline <-  bi_var_marginal_histograms + geom_abline(slope = regression$slope, intercept = regression$intercept, color = "red")
+ggMarginal(bi_var_marginal_histograms_abline, type = "histogram", bins = 11)
+bi_var_marginal_histograms_abline
+
+
+```
+
+###Problem 1 d:
+
+####Based on the regression of age on proportion of black pigmentation, if you observed a male lion with no black pigmentation on its nose, how old would you predict it to be?
+
+The y intercept (0,y) is .8790062, thus when the proportion black on the nose (x) is zero we would predict that the animals age is 12*0.8790062 (~10.8) months old. 
+
+
+###Problem 1 e:
+
+####What is the predicted increase in age for a 10% increase in black pigmentation? 
+
+The slope (x/y) is 10.64712, thus for each increment of 10% increase in nose pigmentatin we would predict an age increase of 10.64712*0.1 (1.06) years. 
+
+
+###Problem 1 f:
+
+What is the coefficient of determination for your fit model? 
+
+```{r}
+
+# Calculating goodness of fit, or coefficient of determination
+age_hat <- regression$intercept + regression$slope * nose_color$proportionBlack
+
+age_hat.ctr <-age_hat - mean(age_hat)
+
+coeff.determination <-  drop(age_hat.ctr %*% age_hat.ctr) / drop(centered_age %*% centered_age)
+coeff.determination
+
+```
+
+###Problem 1 g:
+
+Generate a residual plot to examine the residuals from the estimated regression. Are the residuals approximately normal? Are the evenly distributed around zero? Are the any signs of trends in the residuals?
+
+
+```{r}
+# Calculating the residuals
+
+e <- nose_color$ageInYears - age_hat
+
+regression.df <- tibble(X = nose_color$proportionBlack, Y = nose_color$ageInYears, fitted = age_hat, residuals = e)
+
+
+# Making a residual plot
+ggplot(regression.df, aes(X,residuals)) + geom_point() + geom_hline(yintercept = 0, color = 'red', linetype = 'dashed') + labs(x = "Proportion Black", y = "Residuals", title = "Residual Plot for Nose Pigmentation vs. Age")
+
+
+```
+
+The residuals do not appear normally distributed, rather they look skewed to the left. There seems to be an appoximately even distribution around zero. I perceive a trend towrads increasing absolute value of the residuals from points on the right. 
+
+
+###Problem 2:
+
+Write your own function bivariate.regression(X, Y) that takes as input two vectors, X and Y, and which calculates the regression of Y on X using vector operations. Your function should return a list object that includes two elements
+
+> a list that includes the slope and intercept of the fitted model
+
+> a data frame that includes the X and Y values, the fitted (predicted) values of Y, and the residual values.
+
+```{r}
+
+bivariate.regression <- function(x, y) {
+  
+# Calculating mean centered vectors
+centered_x <- x - mean(x)
+centered_y <- y - mean(y)
+
+# Estimate regression coefficients
+b.est <- (centered_x %*% centered_y) / (centered_x %*% centered_x)
+a.est <- mean(y) - b.est * mean(x)
+
+###Question 2a
+# 'drop' used to convert to scalar values, makes a list of fitted model values
+regression <-  list(intercept = drop(a.est), slope = drop(b.est))
+
+# Calculating goodness of fit, or coefficient of determination
+y_hat <- regression$intercept + regression$slope * x
+
+# Calculating the residuals
+e <- nose_color$ageInYears - y_hat
+
+###Question 2b
+# Makes a dataframe of the two original vectors, the fitted y (predicted) y values, and the residuals 
+regression.df <- tibble(X = x, Y = y, fitted = y_hat, residuals = e)
+
+# Returns the list and table 
+return(list(regression = regression, regression.df = regression.df))
+}
+
+reg.model <- bivariate.regression(nose_color$proportionBlack, nose_color$ageInYears)
+reg.model
+
+```
+
+###Problem 3:
+
+Write a function regression.plots(reg.model) that takes as input the output object for your function in problem 1, and which returns one nicely formatted plot with two subfigures:
+
+>a figure illustrating the bivariate distribution of X and Y and a line representing the regression model. Include in the title of this subplot the values of coefficients of the regression model
+
+>a figure illustrating the residuals from the regression model as a function of X (i.e. a residual plot)
+
+```{r fig1, fig.height = 3, fig.width = 10}
+library(cowplot)
+
+regression.plots <- function(reg.model){
+regression <- reg.model$regression
+regression.df <- reg.model$regression.df
+
+bi_var_marginal_histograms <- ggplot(regression.df, aes(x = X, y= Y)) + geom_point() + labs(x = "Proportion Black", y = "Age", title =  "Bivariate Plot of Nose Pigmentation vs. Age", subtitle = paste("Regression line: y =", regression$slope, "x +",regression$intercept))
+bi_var_marginal_histograms_abline <-  bi_var_marginal_histograms + geom_abline(slope = regression$slope, intercept = regression$intercept, color = "red") 
+ggMarginal(bi_var_marginal_histograms_abline, type = "histogram", bins = 11)
+bi_var_marginal_histograms_abline
+
+# Making a residual plot
+residual_plot <- ggplot(regression.df, aes(X,residuals)) + geom_point() + geom_hline(yintercept = 0, color = 'red', linetype = 'dashed') + labs(x = "Proportion Black", y = "Residuals", title = "Residual Plot for Nose Pigmentation vs. Age", subtitle = "")
+
+composite_plot_1 <- ggdraw() + 
+  draw_plot(bi_var_marginal_histograms_abline, 0, 0, width = .5) + 
+  draw_plot(residual_plot, 0.5, 0, width = .5) +
+  draw_plot_label(c("A.", "B. "), c(0, 0.5), c(1, 1), size = 15)
+
+composite_plot_1
+}
+
+##Parts a and b labled on figure as 'A' and 'B' respectively
+regression.plots(reg.model)
+
+```
+

@@ -1,0 +1,115 @@
+---
+title: "Pipho_K_Assignment06"
+author: "Krista Pipho, kp275"
+date: "March 15, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##Multiple Regression 
+
+Load in required packages
+
+```{r, echo=FALSE, message = FALSE, warning=FALSE}
+
+library(HistData)
+library(cowplot)
+library(broom)
+library(scatterplot3d)
+library(tidyverse)
+
+
+```
+
+###Problem 1:
+
+Load the HistData package and examine the GaltonFamilies data set. Using cowplot create a single figure with three sub-figures: A) the distribution of height for all offspring; B) overlapping density plots giving the height distributions for male and female offspring separately; C) boxplots of height for male and female children separately
+
+```{r fig1, fig.width = 10, message = FALSE, warning=FALSE}
+glimpse(GaltonFamilies)
+
+distribution_of_height <- ggplot(GaltonFamilies, aes(x = childHeight)) + geom_histogram() + labs(x = "Child Height", y = "Count", title = "A. Distribution of Height for all Offspring")
+
+overlapping_density <- ggplot(GaltonFamilies) + geom_density(aes(x = childHeight, fill = gender), alpha = .5) + labs(x = "Child Height", y = "Count", title = "B. Height Distributions for Male and Female Children")
+
+m_f_boxplot <- ggplot(GaltonFamilies) + geom_boxplot(aes(x = gender, y = childHeight, color = gender)) + labs(x = "Child Gender", y = "Child Height", title = "C. Child Height by Sex")
+
+composite_plot_1 <- plot_grid(distribution_of_height, overlapping_density, m_f_boxplot, labels("A.","B.","C."))
+
+composite_plot_1
+
+
+
+```
+
+
+###Problem 2:
+
+Create two 3D scatter plots, one each for male and female offspring, showing the relationship between offspring height and mother and fathers height. 
+
+```{r}
+
+galton_male = filter(GaltonFamilies, gender == 'male')
+
+scatterplot3d(galton_male$father, galton_male$mother, galton_male$childHeight, pch = 16, color = "steelblue", angle = 75, main = "Parental Height and Male Offspring Height", xlab = "Father Height (Inches)", ylab = "Mother Height (Inches)", zlab = "Child Height (Inches)")
+
+galton_female = filter(GaltonFamilies, gender == 'female')
+
+scatterplot3d(galton_female$father, galton_female$mother, galton_female$childHeight, pch = 16, color = "steelblue", angle = 75, main = "Parental Height and Female Offspring Height", xlab = "Father Height (Inches)", ylab = "Mother Height (Inches)", zlab = "Child Height (Inches)")
+
+```
+
+###Problem 3:
+
+For male offspring, using the lm() function, fit a multiple regression of offspring height on father and mother's height. Write out the predicted model with the corresponding coefficients in the form O^male=a+b1F+b2M where O, F and M are offspring, father's, and mother's height. What fraction of the variation in offspring height does the model capture?
+
+
+```{r}
+
+male_children_model <- lm(childHeight~father+mother, galton_male)
+summary(male_children_model)
+
+```
+
+The predicted model for relationship between male offspring height and parental hight is as follows:
+
+$$\hat{O}_{male} =  19.3128 + 0.4176F + 0.3288M$$
+Where  O, F and M are offspring, father's, and mother's height respectively. This model captures 23.8% of the variation in male offspring height. 
+
+###Problem 4:
+
+For female offspring, using the lm() function, fit a multiple regression of offspring height on father and mother's height. Write out the predicted model with the corresponding coefficients in the form O^female=a+b1F+b2M where O, F and M are offspring, father's, and mother's height. What fraction of the variation in offspring height does the model capture? 
+
+
+```{r}
+
+female_children_model <- lm(childHeight~father+mother, galton_female)
+summary(female_children_model)
+
+```
+
+The predicted model for relationship between female offspring height and parental hight is as follows:
+
+$$\hat{O}_{female} =  18.83358 + 0.37254F + 0.30348M$$
+Where  O, F and M are offspring, father's, and mother's height respectively. This model captures 26.8% of the variation in male offspring height. 
+
+
+###Problem 5:
+
+What is the predicted height of a male child, if the mother was 5 ft tall and the father was 6 ft tall? What is the predicted height of a female child from the same parents?
+
+```{r}
+male_child_predicted_height <- (19.3128 + 0.4176*72 + 0.3288*60)/12
+
+
+female_child_predicted_height <- (18.83358 + 0.37254*72 + 0.30348*60)/12
+
+
+print(paste("A six foot tall father and five foot tall mother are predicted to have a ", male_child_predicted_height, " foot tall male child or a ", female_child_predicted_height, " foot tall female child."))
+```
+
+

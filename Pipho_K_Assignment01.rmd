@@ -1,0 +1,328 @@
+---
+title: "Bio 723: Assignment_01"
+author: "Krista Pipho, kp275"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, prompt = FALSE, eval = TRUE, 
+                      warning = TRUE, comment=NA, cache = FALSE,
+                      fig.width = 6, fig.height = 4)
+```
+
+
+```{r, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+
+# Part I : Brushtail possums
+
+```{r}
+
+# Loading in data
+url <- "https://tinyurl.com/lindenmayer-possums"
+possum <- read.csv(url)
+glimpse(possum)
+
+
+```
+
+
+### Question 1a
+
+What are the dimensions of the possums data set?
+
+ 
+```{r}
+dim_desc(possum)
+```
+  
+Discussion of answer as needed.
+ 
+
+### Question 1b
+
+RWhat are the names of the variables in the possum data set?
+ 
+```{r}
+
+colnames(possum)
+
+```
+  
+Discussion of answer as needed.
+
+### Question 1c
+
+Sites where animals were collected were assigned a site number (variable sites). How many unique sites are there in the data set?
+
+```{r}
+length(unique(possum$site))
+```
+
+### Question 1d
+
+Animals were categorized as coming from two different populations (variable Pop). What are the names of the populations?
+
+```{r}
+unique(possum$Pop)
+
+```
+
+### Question 1e
+
+Possums in the study were assigned an "age category" (variable age). There are several samples with missing age information ('NA' values). Read the help on the funtion is.na() and write code to compute the number of samples with missing age data. HINT: the sum() applied to a Boolean vector counts the number of TRUE elements.
+
+```{r}
+sum(is.na(possum$age))
+```
+
+### Question 1f
+
+Create a histogram depicting the distribution of the tail length variable (taill). Make sure to pick an appropriate number of bins for your visualization.
+
+```{r}
+library(ggplot2)
+
+range(possum$taill)
+
+ggplot(data = possum, aes(x = taill)) + geom_histogram(bins = 12)
+
+```
+
+Bin number is 12 because range of the variable is 12
+
+### Question 1g
+
+Create a set of histograms depicting the distribution of tail lengths in the possums data set faceted by population.
+
+```{r}
+
+ggplot(data = possum, aes(x = taill)) + geom_histogram(bins = 12) + facet_wrap(~Pop)
+
+```
+
+### Question 1h
+
+Create a figure that uses boxplots to compare taill in the two different populations.
+
+```{r}
+ggplot(data = possum, aes(y = taill, group = Pop)) + geom_boxplot() + facet_wrap(~Pop)
+
+```
+###QUestion 1i
+
+Histograms can be usefully combined with strip/jitter plots as shown in the figure below. Reproduce the figure below using geom_histogram and geom_jitter layers. Hint: To get the jittered points to sit at the base of each histogram, set the y aesthetic to zero
+
+```{r}
+
+ggplot(data = possum, aes(x = taill)) + geom_histogram(bins = 12, alpha = .35, size = 0) + geom_jitter(aes(y=0, color = Pop), height = 0, alpha = 20) + facet_wrap(~Pop, ncol = 1)
+
+```
+
+-> Come back to this
+
+###Question 1j
+
+Using the pipes and dplyr::summarize, calculate the sample size, mean, standard deviation, and standard error (of the mean) of tail length for each population of possums. Your output should be a single table (tibble). The dplyr function dplyr::n() is useful for this problem, as are the base mean() and sd() functions.
+
+```{r}
+
+summary_taill <- group_by(possum, Pop) %>% summarize("Sample Size" = length(taill) , "Mean" = mean(taill), "Standard Deviation" = sd(taill), "Standard Error" = sd(taill) / sqrt(length(taill)))
+
+print(summary_taill)
+
+```
+
+
+### Question 1k
+
+A useful statistical rule of thumb is that means between groups are significantly different if the difference in means is more than two standard errors (assuming normality, homogeneity of variances, etc). By this rule of thumb, is possum tail length different in the two populations?
+
+```{r}
+
+summary_taill[1,"Mean"] - summary_taill[2,"Mean"] > 2*summary_taill[1,"Standard Error"]
+
+```
+
+### Question 1l
+
+Draw scatter plot showing the relationship between tail length and total body length, using jitter to minimize overplotting and color the points by the population variable.
+
+```{r}
+
+ggplot(data = possum, aes(x = taill, y = totlngth, color = Pop)) + geom_point(bins = 12) + geom_jitter()
+
+```
+
+###Question 1m
+
+Recreate the combined scatter plot / 2D density plot of tail length vs total body length, shown below. Note that I've added a little bit of jitter and alpha-transparency to the drawn points. Make sure to include titles, subtitles and axis labels.
+
+```{r}
+
+ggplot(data = possum, aes(x = totlngth, y = taill, col = Pop)) + ggtitle("Joint Distribution of Tail Length and", subtitle = "Total Length in Two Populations of Brushtail Possums") + geom_point(alpha = .7) + geom_density_2d(alpha = .7, bins = 12) + geom_jitter() + facet_grid(~Pop) + xlab("Total Length (cm)") + ylab("Tail Length (cm)")
+
+```
+
+
+# Part II : Babies
+
+```{r}
+
+# Loading data
+url <- "https://github.com/Bio723-class/example-datasets/raw/master/nc-births.txt"
+babies <- read.table(url, fill = TRUE, header=TRUE, sep="\t")
+glimpse(babies)
+
+```
+
+### Question 1
+
+Write a code block showing how to use dplyr::filter to get all the cases where the age of both the mother and father was 20 years or younger
+ 
+```{r}
+young_parents <- filter(babies, fAge < 21 & mAge < 21)
+print(young_parents)
+``` 
+ 
+
+### Question 2
+
+Write the equivalent code showing how to get the same cases using standard indexing
+
+```{r}
+
+young_parents_indexing <- babies[babies$fAge < 21 & babies$mAge <21,]
+print(young_parents_indexing)
+```
+
+### Question 3
+
+Write a code block that shows how to use dplyr::arrange to sort the births data by the babies birth weight
+
+```{r}
+
+babies_by_weight <- arrange(babies, weight)
+
+```
+
+### Question 4
+
+Using the output from the previous problem, in combination with standard indexing, show how to calculate the mean birth weight of the ten lightest babies
+
+```{r}
+
+print(mean(babies_by_weight$weight[0:10]))
+
+```
+
+### Question 5 
+
+Show how to calculate the mean birth weight of the ten heaviest babies
+
+```{r}
+babies_by_weight <- arrange(babies, desc(weight))
+print(mean(babies_by_weight$weight[0:10]))
+
+```
+
+### Question 6
+
+Write a code block that uses dplyr::group_by() and dplyr::count() to get the counts of cases by mother's smoking status and the baby's term status (premature or full term). 
+
+```{r}
+group_by(babies, smoke, premature) %>% count()
+```
+
+### Question 7
+
+Create a boxplot figure to illustrate how birth weight varies conditional on term classification (premature or full term) and mother's smoking status 
+
+```{r}
+ggplot(babies, aes( x = premature, y = weight, fill = smoke)) + geom_boxplot()
+```
+
+### Question 8
+
+Use dplyr::summarize() to calculate the mean weights of babies for all four combinations of term classification and mother's smoking
+
+```{r}
+
+group_by(babies, smoke, premature) %>% summarize(mean(weight))
+
+```
+
+### Question 9
+
+Write a code block that uses pipes to count the number of premature births in the data set.
+
+```{r}
+filter(babies, premature == "premie") %>% count()
+
+```
+### Question 10
+
+Write a code block that uses pipes to calculate the mean weight, in kilograms, of babies classified as premature.
+
+```{r}
+filter(babies, premature == "premie") %>% summarize(mean(weight))
+
+```
+
+### Question 11
+
+Write a code block that uses pipes to create a scatter plot depicting birth weight in kilograms (y-axis) versus weeks of gestation (x-axis) for babies born to non-smoking mothers, coloring the points according to whether the baby was premature or full term.
+
+```{r}
+
+group_by(babies, premature) %>% 
+  ggplot( aes( x = weeks, y = weight, color = premature)) + geom_point()
+
+```
+### Question 12
+
+Consider the following code block which illustrates two ways to calculate the mean and median gestation time for babies of mothers who smoke:
+
+```{r}
+smokers.1 <-
+  babies %>%
+  filter(smoke == "smoker") %>%
+  summarize(mean.gestation = mean(weeks), median.gestation = median(weeks))
+typeof(smokers.1)
+class(smokers.1)
+smokers.2 <-
+  babies %>%
+  filter(smoke == "smoker") %>%
+  c(mean(babies$weeks), median(babies$weeks))
+typeof(smokers.2)
+class(smokers.2)
+```
+
+  * Sub-question 1: What is the type and class of smokers.1? 
+ 
+  Type: list
+  Class: data.frame
+
+  * Sub-question 2: What is the type and class of smokers.2?
+    
+  Type: list
+  Class: list
+  
+  * Sub-question 3: Why does smokers.1\$mean.gestation work, while smokers.2\$mean.gestation raises an error?
+  
+Because \$ selects a column of a dataframe, but lists do not have columns, only indecies 
+  
+### Question 13
+
+Read the documentation on dplyr::filter_all(), dplyr::any_vars(), and dplyr::all_vars() and then show how to use these functions to filter out of the births data set those cases (rows) for which there is any missing data (across all variables) 
+
+```{r}
+
+glimpse(filter_all(babies,any_vars(!is.na(.))))
+
+
+```

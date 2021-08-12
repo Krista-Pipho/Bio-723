@@ -1,0 +1,125 @@
+---
+title: "Bio 723: Pipho_K_Assignment04"
+author: "Krista Pipho, kp275"
+date: "February 24, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Homework 4
+
+###Problem 1
+
+Write a function, mean.vector(X), that takes a matrix of real values (doubles) and returns the column means as a vector. Do not use built-in vector functions such as sum(), mean(), colSums(), etc.
+
+```{r}
+
+r.m <- matrix(rnorm(15), nrow=5)
+
+mean.vector <- function(x){
+  means <- vector()
+  
+  for(i in 1:dim(x)[2]){
+    sum = 0
+    for(j in 1:dim(x)[1]){
+      sum <- sum + x[j,i]}
+    means <- c(means, sum/j)}
+  return(means)}
+
+mean.vector(r.m)
+```
+
+
+###Problem 2
+
+Write a function, deviation.matrix(X), that takes a matrix of real values and returns a matrix the represents each values deviation from it's respective column mean. Do not use built-in functions such as scale().
+
+```{r}
+
+deviation.matrix <- function(x){
+  m <- mean.vector(x)
+  all.deviations <- vector()
+  for(i in 1:dim(x)[2]){
+    deviations <- vector()
+    for(j in 1:dim(x)[1]){
+      deviations <- rbind(deviations,(x[j,i]-m[i]))
+    }
+    all.deviations <- cbind(all.deviations,deviations)
+  }
+  return(as.matrix(all.deviations))
+}
+
+deviation.matrix(r.m)
+
+```
+
+###Problem 3
+
+Write a function covariance.matrix(X), that takes as input a matrix of real values (variables in columns) and returns a covariance matrix. Compare the results with built-in cov() function to make sure your function works properly.
+
+```{r}
+
+covariance.matrix <- function(x){
+  x <- deviation.matrix(x)
+  all.covs <- vector()
+  for(i in 1:dim(x)[2]){
+    covs <-  vector()
+    for(h in 1:dim(x)[2]){
+      sum  = 0
+      for(j in 1:dim(x)[1]){
+
+        sum <- sum + x[j,i] * x[j,h]
+      }
+      covs <- rbind(covs,sum/(j-1))
+    }
+    all.covs <- cbind(all.covs,covs)
+  }
+  return(all.covs)
+  }
+
+#Show results from my covariance matrix function
+covariance.matrix(r.m)
+#Compare with results from built in covariance matrix function
+cov(r.m)
+
+```
+
+###Problem 4
+
+Write a function correlation.matrix(X), that takes as input a matrix of real values (variables in columns) and returns a correlation matrix. Compare the results with built-in cor() function to make sure your function works properly.
+
+```{r}
+
+correlation.matrix <- function(x){
+  dev.m <- deviation.matrix(x)
+  means.m <- mean.vector(x)
+  cov.m <- covariance.matrix(x)
+  all.sd <- vector()
+  for(i in 1:dim(dev.m)[2]){
+    sum = 0
+    for(j in 1:dim(dev.m)[1]){
+      sum <- sum + (dev.m[j,i])^2
+    }
+    all.sd <- c(all.sd,sqrt((sum/(j-1))))
+  }
+  all.cor <- vector()
+  for(i in 1:dim(x)[2]){
+    cors <-  vector()
+    for(j in 1:dim(x)[2]){
+      
+     cors <- rbind(cors,cov.m[j,i]/(all.sd[j]*all.sd[i]))
+    }
+    all.cor <- cbind(all.cor,cors)
+  }
+  return(all.cor)
+}
+
+#Showing output of my correlation matrix function
+correlation.matrix(r.m)
+#Comparing to the output of the built in correlation function
+cor(r.m)
+
+```

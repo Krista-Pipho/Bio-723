@@ -1,0 +1,91 @@
+---
+title: "Pipho_K_Assignment10"
+author: "Krista Pipho"
+date: "April 28, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Bootstrapping 
+
+Load in libraries
+
+```{r message=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(datasets)
+library(bootstrap)
+
+```
+
+
+###Problem 1:
+
+Create a table that gives the slope of each of the major axes and centroids (bivariate means) for each species.Show how to compute the values in the table below (5 pts)
+
+```{r, message=FALSE, warning = FALSE}
+
+#Defines a function to calculate slope of the major axis
+get.major.axis <- function(x){
+ eig.x <- eigen(cov(x))$vectors
+return(eig.x[2][1]/eig.x[1][1])
+}
+
+iris  %>%
+  group_by(Species) %>%
+  summarize(mean.Sepal.Length = mean(Sepal.Length), mean.Sepal.Width = mean(Sepal.Width),major.axis.slope = get.major.axis(cbind(Sepal.Length, Sepal.Width)))
+
+```
+
+###Problem 2: 
+
+Calculate bootstrap 95% confidence intervals (percentile based) for the slope of the major axes for the sepal morphology variables of each species in the iris data set. If you were interested in the hypothesis that sepal traits had similar scaling relationships across all three species, what conclusions might you draw based on your bootstrap analyses? (12 pts)
+
+```{r,  message=FALSE, warning = FALSE}
+
+#Defines a function to calculate slope of the major axis
+get.major.axis <- function(x, y){
+  new <- cbind(x,y)
+ eig.x <- eigen(cov(new))$vectors
+return(eig.x[2][1]/eig.x[1][1])
+}
+
+#Defines a function to calculate 95% bootstrap confidance intervals
+get.bootstrap <- function(x, y){
+# generate 1000 bootstrap sample estimate of major axis slope
+b <- bootstrap::bootstrap(x = x, y = y, 1000, get.major.axis)
+
+# estimate the bootstrap percentile confidence limits
+return(rbind(quantile(b$thetastar,c(0.025,0.975))))
+}
+
+
+
+iris  %>%
+  group_by(Species) %>%
+  summarize(bootstrap.confidance = get.bootstrap(Sepal.Length, Sepal.Width))
+
+```
+
+
+The bootstrap analysis suggests that versicolor and virginica both have near zero slopes and cannot be distinguished from eachother. For setosa, it seems the 95% confidance interval spans a huge range and not much can be concluded about it. 
+
+###Problem 3
+
+Show how to re-create Figure 1. (5 pts)
+
+```{r, message=FALSE, warning = FALSE}
+
+# Plot
+pc1v2 <-
+  iris %>%
+  ggplot(aes(x = Sepal.Length, y= Sepal.Width, color = Species)) +
+  geom_point(size = 2, alpha = .8) +
+  geom_smooth(method = "lm", fill = NA)
+
+pc1v2
+```
+

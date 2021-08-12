@@ -1,0 +1,192 @@
+---
+title: "Assignment 7"
+author: "Krista Pipho, kp275"
+date: "March 31, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##PCA and CVA
+
+Load in libraries
+
+```{r message=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(cowplot)
+library(broom)
+library(magrittr)
+library(MASS)
+library(ggforce)
+
+```
+
+
+###Problem 1:
+
+Create a data frame from the wine data, and assign meaningful column names
+
+```{r}
+
+url <- "https://raw.githubusercontent.com/Bio723-class/example-datasets/master/wine.data"
+wine <- read.csv(url, header = FALSE)
+
+# Name the wine dataset columns
+colnames(wine)<- c("Cultivar", "Alcohol", "Malic Acid", "Ash", "Alcalinity of ash", "Magnesium", "Total phenols", "Flavanoids", "Nonflavanoid phenols", "Proanthocyanins", "Color intensity", "Hue", "OD280/OD315 of diluted wines", "Proline")
+
+glimpse(wine)
+
+```
+
+
+###Problem 2:
+
+Generate a derived data frame with the centered and scaled chemical attributes.
+
+```{r}
+
+measures.only <- wine %>% dplyr::select(-Cultivar)
+cultivar.only <- wine %>% dplyr::select(Cultivar)
+cultivar.only <- lapply(cultivar.only, as.factor)
+
+#Center and scale te data
+measures.only <- as.data.frame(scale(measures.only))
+
+```
+
+
+###Problem 3:
+
+Using the centered-and-scaled attributes, carry out PCA of the wine data set. Generate a plots of the observations in the space of the first two PC axes. How much of the variation in the data is captured by PCs 1 and 2?
+
+```{r}
+
+# Run PCA analysis
+measures.pca <- prcomp(measures.only, center=TRUE, retx=TRUE)
+
+# Extract PCA scores from prcomp output
+pca.scores.df <- as.data.frame(measures.pca$x)
+
+# Define a coordinate system for the plot
+coord.system <- coord_fixed(ratio=1, xlim=c(-5,5),ylim=c(-5,5))
+
+# Add the cultivar lables back in
+pca.scores.lab <- cbind(pca.scores.df,cultivar.only)
+
+# Plot
+pc1v2 <-
+  pca.scores.lab %>%
+  ggplot(aes(x = PC1, y= PC2, color = Cultivar)) +
+  geom_point(size = 2, alpha = .8) + 
+  coord.system + theme_classic()
+
+pc1v2
+
+# See a summary of how much varriance is explained by each PC
+summary(measures.pca)
+
+```
+PC1 captures 36% of varriance in the data, while PC2 captures 19%. 
+
+
+###Problem 4:
+
+Using the centered-and-scaled attributes, carry out CVA of the wine data set using the MASS::lda() function. How much of the between-group variance is captured by the respective canonical variates?
+
+```{r}
+
+# Adds cultivar lables back on
+measures.lab <- cbind(measures.only,cultivar.only)
+
+#
+measures.lda <- lda(Cultivar ~ ., data = measures.lab)
+measures.lda
+
+```
+
+LD1 captures 69% of the between group variance, while LD2 captures 31%. 
+
+
+###Problem 5:
+
+Generate a basic CVA plot for the wine data set
+
+```{r}
+
+measures.sub <- 
+  measures.only %>% as.matrix  # cast to matrix for calculations
+
+# calculate CV scores
+CVA.scores <- measures.sub %*% measures.lda$scaling
+
+# create data frame with scores
+measures.CV <- data.frame(CVA.scores)
+measures.CV$Cultivar <- as.factor(wine$Cultivar)
+
+measures.cva.plot <-
+  ggplot(measures.CV, aes(x = LD1, y = LD2)) + 
+  geom_point(aes(color=Cultivar, shape=Cultivar), alpha=0.7) + 
+  labs(x = "CV1", y = "CV2") +
+  coord_fixed(ratio=1) + theme_classic()
+
+measures.cva.plot
+```
+
+
+
+###Problem 6:
+
+Generate a CVA plot illustrating the 95% confidence regions for the group means. 
+
+
+```{r}
+
+# Look up the chi squared values for .05 confidance
+chi2 = qchisq(0.05,2, lower.tail=FALSE)
+
+# Calculate the chi squared confidance regions
+CIregions.mean.and.pop <-
+  measures.CV %>%
+  group_by(Cultivar) %>%
+  summarize(CV1.mean = mean(LD1),
+            CV2.mean = mean(LD2),
+            mean.radii = sqrt(chi2/n()),
+            popn.radii = sqrt(chi2))
+
+# Plot the confidance regions as a for the mean and population
+measures.cva.plot2 <-
+  measures.cva.plot + 
+  geom_circle(data = CIregions.mean.and.pop,
+              mapping = aes(x0 = CV1.mean, y0 = CV2.mean, r = mean.radii),
+              inherit.aes = FALSE) 
+
+measures.cva.plot2
+```
+
+
+###Problem 7:
+
+Generate another CVA plot illustrating the 95% tolerance regions for the group population distributions. 
+
+```{r}
+
+measures.cva.plot3 <-
+  measures.cva.plot +
+  geom_circle(data = CIregions.mean.and.pop,
+              mapping = aes(x0 = CV1.mean, y0 = CV2.mean, r = popn.radii),
+              linetype = "dashed", 
+              inherit.aes = FALSE) 
+
+measures.cva.plot3
+
+```
+
+
+###Problem 8:
+
+Comment on the similarities and differences between the PCA plot and CVA plot of the wine data.
+
+The CVA plot has a very similar shape to the PCA plot, but seperates groups much more clearly. No 'stray' points are present within the 95% confidance interval of a different CVA group, but the edges of PCA groups are quite intermingled. If I needed to descriminate groups using this data I would deffinately choose the CVA over PCA for that analysis. 

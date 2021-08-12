@@ -1,0 +1,217 @@
+---
+title: "Bio 723: Pipho_K_Assignment03"
+author: "Krista Pipho, kp275"
+date: "February 17, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Homework 3
+
+###Problem 1. 
+
+Write a function, vec.dot(x,y), that calculates the dot product of two vectors, x and y, of arbitrary number of elements.
+
+```{r}
+
+a <- 1:15
+b <- 10:24
+c <- 1:24
+
+vec.dot <- function(x,y){
+dot <- 0
+if(length(x) == length(y)){
+for(i in 1:length(x)){
+  dot <- dot + x[i]*y[i]}
+return(dot)}else{return("Error, lengths mismatched")}
+}  
+
+# Demonstrating output of the function I wrote
+vec.dot(a,b)
+# Demonstrating output of my function when the vectors have mismatched lengths
+vec.dot(a,c)
+# Showing that my output is the same as that for built in functions
+sum(a*b)
+
+```
+
+
+
+###Problem 2
+Write a function, vec.length(x), that calculates the Euclidean length of a vector.
+
+```{r}
+
+vec.length <- function(x){
+  count <- 0 
+  for(i in 1:length(x)){
+    count <- count + x[i]*x[i]}
+  count = sqrt(count)
+  return(count)
+}
+
+# Demonstrating my function for vector length
+vec.length(a)
+
+# A deffinition using built in functions to calculate vector length
+test.length <- function(x){sqrt(sum(x^2))}
+
+# Result of built in functions for comparasin 
+test.length(a)
+
+  
+```
+
+###Problem 3
+Write a function vec.cosine(x,y), that calculates the cosine of the angle between two vectors using your vec.dot() and vec.length() functions.
+
+```{r}
+library(lsa)
+
+vec.cosine <- function(x,y){vec.dot(x,y)/(vec.length(x)*vec.length(y))}
+
+# Demonstrating my function for calculating cosine of the angle between two vectors
+vec.cosine(a,b)
+
+# Result of built in function for comparasin 
+cosine(a,b)
+
+```
+
+###Problem 4
+
+Write a function vec.angle(x, y, deg=FALSE) that by defaults calculates the angle, in radians, between two vectors. When the argument deg=TRUE your function should return the angle in degrees.
+
+```{r}
+
+vec.angle <- function(x,y,deg = FALSE){
+  x.cos <- vec.cosine(x,y)
+  if(deg == FALSE){return(acos(x.cos))}
+  if(deg == TRUE){return((acos(x.cos)*180)/pi)}
+}
+
+vec.angle(a,b, TRUE)
+
+```
+
+###Problem 5
+
+Write a function, vec.distance(x,y) that calculates the distance between two vectors (i.e. distance between their end points)
+
+```{r}
+
+vec.distance <- function(x,y){
+  len.x <- vec.length(x)
+  len.y <- vec.length(y)
+  cos.x.y <- vec.angle(x,y)
+  c <- sqrt(len.x^2 + len.y^2 - 2*(len.x)*(len.y)*(cos.x.y))
+  return(c)
+}
+
+vec.distance(a,b)
+
+```
+
+###Problem 6
+Write a function vec.mean(x) that calculates the mean of x, using vector algebraic operations.
+
+```{r}
+
+vec.mean <- function(x){
+  sum = 0
+  for(i in 1:length(x)){
+    sum = sum + x[i]
+  }
+  mean <- sum/length(x)
+  return(mean)
+}
+
+vec.mean(a)
+
+```
+
+
+###Problem 7
+
+Write a function vec.cov(x,y) that calculates the covariance of x and y, using vector algebraic operations. Remember to mean center! Compare the results with built-in cov() function to make sure your function works properly.
+
+```{r}
+
+vec.cov <- function(x,y){
+  if(length(x) == length(y)){
+  mean.x <- vec.mean(x)
+  mean.y <- vec.mean(y)
+  sum = 0
+  for(i in 1:length(x)){
+   sum = sum +(x[i]-mean.x)*(y[i]-mean.y)
+  }
+  return(sum/(length(x)-1))}
+  else{return("Error, lengths mismatched")}
+}
+
+# Showing the output of my function for calculating covariance
+vec.cov(a,b)
+
+# Result of built in function for comparasin 
+cov(a,b)
+
+```
+
+
+###Problem 8
+
+Write a function vec.var(x) that calculates the variance of x, using vector algebraic operations. Remember to mean center! Compare the results with built-in var() function to make sure your function works properly.
+
+```{r}
+
+vec.var <- function(x){
+  mean.x <- vec.mean(x)
+  sum = 0
+  for(i in 1:length(x)){
+    sum <- sum + (x[i]-mean.x)^2
+  }
+  return(sum/(length(x)-1))
+}
+
+# Showing the output of my function for calculating variance 
+vec.var(a)
+
+# Result of built in function for comparasin 
+var(a)
+
+```
+
+
+###Problem 9
+Write a function vec.cor(x,y) that calculates the correlation of tow vectors, x and y, using vector algebraic operations. Remember to mean center! Compare the results with built-in cor() function to make sure your function works properly.
+
+```{r}
+
+vec.cor <- function(x,y){
+
+  cov.x.y <- vec.cov(x,y)
+  sd.x <- sd(x)
+  sd.y <- sd(y)
+  
+  cor <- cov.x.y/(sd.x*sd.y)
+  return(cor)
+}
+
+# Showing the output of my function for calculating corelation  
+vec.cor(a,b)
+
+# Result of built in functions for comparasin 
+cor(a,b)
+
+```
+
+
+
+
+
+
+
+

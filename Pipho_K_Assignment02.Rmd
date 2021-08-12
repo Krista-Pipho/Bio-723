@@ -1,0 +1,231 @@
+---
+title: "Pipho_K_Assignment_02"
+author: "Krista Pipho"
+date: "February 3, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer)
+color.scheme <- rev(brewer.pal(9,"RdBu"))
+library(cowplot)
+```
+
+
+
+
+###Problem 1
+
+Load the tidy, long version of the Spellman data set.
+
+```{r}
+
+# Loading in data
+url <- "https://raw.githubusercontent.com/Bio723-class/example-datasets/master/spellman-long.csv"
+spellman <- read_csv(url)
+glimpse(spellman)
+dim(spellman)
+
+```
+
+###Problem 2
+
+Show how to create a derived data frame that only includes the observations from the alpha factor (alpha) experiment, and genes that have no more than two missing (NA) observations. What are the dimensions of this data frame?
+
+```{r}
+# Removing experiments besides alpha
+alpha <- filter(spellman, expt == "alpha") %>% dplyr::select(-expt) 
+
+# Changing from long form to wide form of dataset and removing genes with more than 2 NA values
+alpha_wide <- spread(alpha, time, expression) %>% filter(!rowSums(is.na(.)) > 2)
+
+# Getting dataframe dimensions
+dim(alpha_wide)
+glimpse(alpha_wide)
+
+```
+
+
+###Problem 3
+I will now use the dataframe from the previous question to assess the variabuility of genes in the dataset
+  
+Part a.
+
+Compute the gene names for the 500 most variable genes in the alpha factor experimental conditions 
+
+```{r}
+alpha_long <- alpha_wide %>% gather(time,expression, '0':'119',na.rm = FALSE)
+
+gene_var <- alpha_long %>% group_by(gene) %>% summarize(exp_var = var(expression, na.rm = TRUE)) %>% arrange(desc(exp_var)) 
+
+most_var <- gene_var %>% slice(0:500)
+
+print(most_var)
+
+
+```
+Part b. 
+
+Make a corresponding data frame containing only the 500 most variable genes.
+
+```{r}
+var_genes <- inner_join(most_var, alpha_wide)
+
+glimpse(var_genes)
+
+```
+
+Part c.
+
+Of the 500 genes under consideration, which shows the greatest variability?
+
+```{r}
+most_var %>% slice_max(exp_var)
+
+```
+
+Part d. 
+
+Which gene shows the least variability?
+
+```{r}
+most_var %>%  slice_min(exp_var)
+
+```
+
+###Problem 4
+
+Show how to find the index of the time point of minimal expression for each of the 500 most variable genes
+
+```{r}
+
+var_long <- var_genes %>% gather(time,expression, '0':'119',na.rm = FALSE) 
+
+min_exp <- var_long %>% group_by(gene) %>% summarise(min_exp = which.min(expression)) %>% arrange(desc(min_exp))
+
+var_long$time <- as.numeric(var_long$time)
+
+
+
+```
+
+###Problem 5
+
+Create a corresponding heat map showing the 500 genes sorted by the time point of minimal expression
+
+```{r, fig.width=8, fig.height=10}
+
+var_long %>% 
+    ggplot(aes(x = time, y = gene)) + 
+    geom_raster(aes(fill = expression)) +
+    scale_fill_gradientn(colors=color.scheme, limits = c(-2.5, 2.5)) +
+    scale_y_discrete(limits=min_exp$gene) +
+    labs(x = "Time (mins)", y = "Genes", 
+       title = "500 most variable genes",
+       subtitle = "Sorted by time of minimum expression") +
+  # the following line suppresses tick and labels on y-axis
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+```
+
+###Problem 6
+
+Create a "wide" version of your 500 gene data frame, with genes as variables
+
+```{r}
+dim(var_long)
+gene_wide <- var_long %>%  dplyr::select(-exp_var) %>% spread(gene, expression) 
+dim(gene_wide )
+
+```
+
+
+###Problem 7
+
+Calculate a correlation matrix giving all pairwise correlations between the 500 genes
+
+```{r}
+
+alpha.correlations <- 
+  gene_wide %>%
+  dplyr::select(-time)  %>% # drop time
+  cor(use = "pairwise.complete.obs")
+
+dim(alpha.correlations)
+
+```
+###Problem 8
+
+How many genes have correlations greater than 0.6 with the most variable gene in the data set (see earlier question)?
+
+```{r}
+
+highest_var_gene <- most_var$gene[1]
+print(highest_var_gene)
+
+cor_with_highest_var_gene <- rownames(alpha.correlations)[alpha.correlations[highest_var_gene,] > 0.6]
+length(cor_with_highest_var_gene)
+
+#alpha.correlations %>% filter(alpha.correlations[0] > .6) %>% length()
+
+```
+
+### Problem 9
+
+Create a heat map and corresponding line plots for the genes with correlations greater than 0.6 with the most variable gene in the data set. Both heat map and line plots should show expression of the correlated genes over time. In the line plot, highlight the most variable gene. Combine these two figures as (A) and (B) subfigures using cowplot.
+
+```{r, fig.width=10, fig.height=3}
+
+line_plot_1 <- var_long %>%
+  filter(gene %in% cor_with_highest_var_gene) %>%
+  ggplot(aes(x = time, y = expression, group = gene)) + 
+    geom_line(alpha = 0.33) +
+    theme(legend.position = "none")
+
+heat_map_1 <- var_long %>% 
+    filter(gene %in% cor_with_highest_var_gene) %>%
+    ggplot(aes(x = time, y = gene)) + 
+    geom_tile(aes(fill = expression)) +
+    scale_fill_gradientn(colors=color.scheme, limits = c(-2.5, 2.5)) +
+    scale_y_discrete(limits=min_exp$gene) +
+    labs(x = "Time (mins)", y = "Genes", 
+       title = ("YBR040W Correlated genes"),
+       subtitle = "Sorted by time of minimum expression") +
+  # the following line suppresses tick and labels on y-axis
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+composite_plot_1 <- ggdraw() + 
+  draw_plot(line_plot_1, 0, 0, width = 0.5) + 
+  draw_plot(heat_map_1, 0.5, 0, width = 0.5) +
+  draw_plot_label(c("A", "B"), c(0, 0.5), c(1, 1), size = 15)
+
+composite_plot_1
+
+```
+
+
+###Problem 10
+Identify a "real-world" (i.e. published and available) data set from your scientific sub-field. Provide a reference to the paper this data set is associated with, a link to the data set, and describe (in broad terms) the structure of this data. How is the data organized in it's current form? Does the data have missing values? If you wanted to analyze this data yourself, what sort of wrangling would you anticipate having to do with this data? 
+
+
+Medina-Munoz, H. C.; Lapointe, C. P.; Porter, D. F.; Wickens, M. Records of RNA Locations in Living Yeast Revealed through Covalent Marks. Proc. Natl. Acad. Sci. U. S. A. 2020, 117 (38), 23539-23547. https://doi.org/10.1073/pnas.1921408117.
+
+Data:  https://www.pnas.org/highwire/filestream/948885/field_highwire_adjunct_files/4/pnas.1921408117.sd04.xlsx
+
+This data is currently formated with each row representing a yeast gene and each column representing number of U's attatched to transcript. Each cell has a count of transcripts detected for a given gene and U count. The data has missing values, as some genes have no detected transcripts and many genes have a low maximum U count. I anticipate that similar wide to long transitions would be useful as I attempted to understand the relationship between gene identity and U tag pattern. I would also sometimes join this data with columns desctibing features of the genes (ex predicted signal peptide strength, transcript length). Ordering and filtering operations would be handy precursors to visualization. 
+
+
+
+
+
+
+
+
+
+

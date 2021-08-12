@@ -1,0 +1,201 @@
+---
+title: "Pipho_K_Assignment06"
+author: "Krista Pipho, kp275"
+date: "March 30, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Bivariate Regression 
+
+Load in libraries and the Iris dataset
+
+```{r message=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(broom)
+library(GGally)
+library(cowplot)
+
+library(datasets)
+glimpse(iris)
+
+```
+
+###Problem 1:
+
+Do a PCA analysis on the iris data set with all three species pooled together, based on the covariance of the sepal and petal variables. Generate a plot showing the projection of the specimens on the first two PC axes. Represent the specimens from a given species with different colors and shapes
+
+```{r}
+
+# Transform the iris dataset into longform
+long.iris <- iris %>% tidyr::gather(Measure, Count, -Species)
+glimpse(long.iris)
+
+# Drop the Species column
+measures.only <- iris %>% dplyr::select(-Species) 
+
+# Calculate covriance matrix
+cov(measures.only)
+
+# Run PCA analysis
+measures.pca <- prcomp(measures.only, center=TRUE, retx=TRUE)
+
+# Extract PCA scores from prcomp output
+pca.scores.df <- as.data.frame(measures.pca$x)
+
+# Define a coordinate system for the plot
+coord.system <- coord_fixed(ratio=1, xlim=c(-4,4),ylim=c(-4,4))
+
+# Isolate the species column and add it to the scores data
+species.only <-
+  iris %>%
+  dplyr::select(Species)
+pca.scores.df <- cbind(pca.scores.df,species.only)
+
+glimpse(pca.scores.df)
+
+# Plot
+pc1v2 <-
+  pca.scores.df %>%
+  ggplot(aes(x = PC1, y= PC2, color = Species, shape =Species)) +
+  geom_point(size = 2, alpha = .8) + 
+  coord.system + theme_classic()
+
+
+pc1v2
+```
+
+
+###Problem 2:
+
+What fraction of the variance in the data is captured by PC1? What fraction of the variation is captured by PC2?
+
+```{r}
+summary(measures.pca)
+```
+92.5% of the variance is captured by PC1 and 5.3% of the variance is captured by PC2. 
+
+
+###Problem 3:
+
+Create a biplot, simulatenously depicting the samples and variables in the space of PCs 1 and 2, by modifying the plot you created in problem 1 to include a vector depiction of the PC loadings.
+
+
+```{r}
+
+# Extract eigenvectors from the prcomp output
+V <- measures.pca$rotation 
+
+# Extract diagonal matrix w/sqrts of eigenvalues on diagonal
+L <- diag(measures.pca$sdev) 
+
+# Multiplies the eigenvectors by the diagonal matrix to get loadings
+measures.loadings <- V %*% L
+
+# Pull out first two principal componants, rename
+loadings.1and2 <-
+  data.frame(measures.loadings[,1:2]) %>%
+  rename(PC1.loading = X1, PC2.loading = X2) %>%
+  mutate(variable = row.names(measures.loadings))
+
+# Add to the former plot creating a biplot
+pc1v2.biplot <-
+  pc1v2 +
+  geom_segment(data=loadings.1and2,
+               aes(x = 0, y = 0, xend = PC1.loading, yend = PC2.loading),
+               color='black', inherit.aes = FALSE,
+               arrow = arrow(angle=15, length=unit(0.1,"inches"))) +
+               geom_text(data=loadings.1and2,inherit.aes = FALSE,
+               aes(x = PC1.loading, y = PC2.loading, label=variable),
+               color='black', nudge_x = 1, nudge_y = 1)
+
+pc1v2.biplot
+
+```
+
+###Problem 4:
+
+Calculate the factor loadings the iris PCA. Which of the original variable(s) contribute most to PC1? Which of the original variable(s) contribute most to PC2?
+
+```{r}
+
+# Loadings, as calculated above
+measures.loadings
+
+```
+
+Petal length has the largest contribution to PC1, while Sepal length and width contribute most to PC2.
+
+###Problem 5:
+
+Carry out PCA of the iris data set again, using the correlation matrix rather than covariance matrix. Based on this new PCA, generate another biplot like the one you created in Problem 4 and recalculate the factor loadings. Does your perception of the relative contribution of the original variables to the PCs change when you carry out PCA on the correlation matrix? If so, how? 
+
+```{r}
+
+# Calculate correlation matrix
+cor(measures.only)
+
+# Run PCA analysis
+measures.pca <- prcomp(measures.only, center=TRUE, retx=TRUE, scale.=TRUE)
+
+# Extract PCA scores from prcomp output
+pca.scores.df <- as.data.frame(measures.pca$x)
+
+# Define a coordinate system for the plot
+coord.system <- coord_fixed(ratio=1, xlim=c(-4,4),ylim=c(-4,4))
+
+# Isolate the species column and add it to the scores data
+species.only <-
+  iris %>%
+  dplyr::select(Species)
+pca.scores.df <- cbind(pca.scores.df,species.only)
+
+# Plot
+pc1v2 <-
+  pca.scores.df %>%
+  ggplot(aes(x = PC1, y= PC2, color = Species, shape =Species)) +
+  geom_point(size = 2, alpha = .8) + 
+  coord.system + theme_classic()
+
+# Extract eigenvectors from the prcomp output
+V <- measures.pca$rotation 
+
+# Extract diagonal matrix w/sqrts of eigenvalues on diagonal
+L <- diag(measures.pca$sdev) 
+
+# Multiplies the eigenvectors by the diagonal matrix to get loadings
+measures.loadings <- V %*% L
+
+# Pull out first two principal componants, rename
+loadings.1and2 <-
+  data.frame(measures.loadings[,1:2]) %>%
+  rename(PC1.loading = X1, PC2.loading = X2) %>%
+  mutate(variable = row.names(measures.loadings))
+
+# Add to the former plot creating a biplot
+pc1v2.biplot <-
+  pc1v2 +
+  geom_segment(data=loadings.1and2,
+               aes(x = 0, y = 0, xend = PC1.loading, yend = PC2.loading),
+               color='black', inherit.aes = FALSE,
+               arrow = arrow(angle=15, length=unit(0.1,"inches"))) +
+               geom_text(data=loadings.1and2,inherit.aes = FALSE,
+               aes(x = PC1.loading, y = PC2.loading, label=variable),
+               color='black', nudge_x = 1, nudge_y = 1)
+
+pc1v2.biplot
+
+```
+
+```{r}
+
+# Loadings, as calculated above
+measures.loadings
+
+```
+
+The contributions of variables to different principal componants seems to have changed a lot. Petal length, Petal width and Sepal length now all appear to be major contributers to PC1, rather than just petal length. Sepal Width now seems to be the primary contrubuter to PC2, rather than a relatvely equal contributon on sepal width and sepal length. 
